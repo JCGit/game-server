@@ -1,0 +1,34 @@
+package Game;
+
+import "common.proto";
+import "rpc.proto";
+
+service C2SRecord {
+	rpc getRecord (C2S_RoomRecord) returns (S2C_RoomRecord) {option(rpcid) = 301;}
+}
+
+service S2CRecord {
+	
+}
+
+message C2S_RoomRecord {
+	optional uint32 uin = 1;
+	optional GameType gameType = 2;
+}
+
+message RoomRecord {
+	optional uint32 roomId = 1;
+	optional uint32 date   = 2;
+	message PlayerRecord {
+		optional string name  = 1;
+		optional int32 score = 2;
+	}
+	repeated PlayerRecord playerRecord = 3;
+	optional uint32 roundId = 4;
+	optional GameType gameType = 5;
+}
+
+message S2C_RoomRecord {
+	repeated RoomRecord records = 1;
+}
+

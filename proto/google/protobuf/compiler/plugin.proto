@@ -1,0 +1,23 @@
+// from version 2.6.1
+
+package google.protobuf.compiler;
+option java_package = "com.google.protobuf.compiler";
+option java_outer_classname = "PluginProtos";
+
+import "google/protobuf/descriptor.proto";
+
+message CodeGeneratorRequest {
+  repeated string file_to_generate = 1;
+  optional string parameter = 2;
+  repeated FileDescriptorProto proto_file = 15;
+}
+
+message CodeGeneratorResponse {
+  optional string error = 1;
+  message File {
+    optional string name = 1;
+    optional string insertion_point = 2;
+    optional string content = 15;
+  }
+  repeated File file = 15;
+}

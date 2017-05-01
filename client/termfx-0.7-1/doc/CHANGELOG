@@ -1,0 +1,42 @@
+# CHANGELOG #
+
+## Version 0.7 ##
+
+* added mouse support from newer versions of termbox
+* in the case of key events, either key or char are now nil instead of 0.
+* added termfx.copyregion, termfx.scrollregion and the same as buffer
+  methods
+* added termgfx.getcell() and buffer:getcell()
+* fixed a bug in termfx.colorinfo() for NORMAL output mode.
+
+## Version 0.6 ##
+
+* changed termfx.attributes() and  and buf:attributes() to have optional
+  arguments, defaulting to the current default attributes. This way you
+  can for example only change the foreground color.
+* "fixed" Makefile to work from luarocks on Mac OS X. The problem was
+  that termbox's waf build system would just compare the contents of $CC
+  to gcc or clang, but when called from luarocks it contains some more
+  stuff... unsetting CC before calling waf configure fixes this.
+* setting cells to chars < ' ' will now set to ' '
+
+## Version 0.5 ##
+
+* added termfx.rgb2color(), termfx.grey2color() and termfx.colorinfo()
+* added buf:printat() and buf:blit() methods
+* added termfx.size() and buf:size()
+* added elapsed field to event table returned from termfx.pollevent()
+* made termfx.pollevent accept nil as timeout value, treating it as if
+  none were given.
+* more samples
+* fixed incredibly stupid bug :(
+
+## Version 0.4 ##
+
+* removed termfx.utf8 stuff. You should really be using a dedicated lib.
+* added termfx.printat()
+* lua 5.3 beta compatibility
+
+## Version 0.3 ##
+
+* initial release

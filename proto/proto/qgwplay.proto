@@ -1,0 +1,136 @@
+package Game;
+
+import "common.proto";
+import "rpc.proto";
+
+service C2SQgwPlay {
+}
+
+service S2CQgwPlay {
+  rpc pushScore (QgwScore) returns (NilMessage) {option(rpcid)=221;}  //广播台面积分,与给玩家加积分
+}
+
+message QgwRoundPlayerResult{
+  optional uint32 uin = 1;
+  optional int32 score = 2;  //加减积分
+}
+
+//单局结算
+message QgwRoundResult {
+  repeated  QgwRoundPlayerResult  result  =  1;
+}
+
+//玩家结算信息
+message QgwPlayerAccounts{
+  optional uint32 uin = 1 ;
+  optional int32 score = 2 ;
+  optional string name = 3;
+  optional uint32 winCount = 4;
+  optional uint32 loseCount = 5;
+}
+
+//房间结算
+message QgwRoomAccounts{
+  repeated  QgwPlayerAccounts playerAccounts = 1;
+  optional  uint32 winnerId = 2;
+}
+
+//玩家出牌结果
+message QgwPlayCards {
+  enum QgwCardType{
+      NONE = 0;
+      THREE = 1;
+      PAIR = 2;
+      FOUR = 3;
+      SINGLE = 4;
+  }
+  optional  uint32    uin          =  1;
+  repeated  uint32    cards        =  2;
+  optional  QgwCardType  cardType  =  3;
+}
+
+enum QgwOperateType{
+  QGW_PLAY = 0;
+  QGW_SKIP = 1;
+}
+
+message QgwOperate {
+  optional QgwOperateType type = 1;
+  optional uint32 uin = 2;
+  repeated uint32 canOper = 3;
+  optional bool  first = 4; //是否为本回合先手
+}
+
+//推送玩家局内状态
+message QgwRoundPlayerState{
+  enum QgwPlayerState{
+    QGW_NORMAL = 0;
+    QGW_SKIP = 2;
+    QGW_PLAY = 3;
+    QGW_READY = 4;
+    QGW_NOCARD = 5;
+  }
+  optional uint32 uin = 1;       
+  optional QgwPlayerState state = 2;
+  optional uint32 num = 3;
+}
+
+message QgwPlayerCards{
+  optional uint32 uin = 1;
+  repeated uint32 cards = 2;
+}
+
+message QgwRoundState{
+  enum QgwRoundStateType {
+    QGW_ROUND_ROB        = 0;    //叫倍
+    QGW_ROUND_PLAY = 1;    //出牌
+    QGW_ROUND_ACCOUNTS   = 2;    //单局结算
+  }
+  optional QgwRoundStateType state = 1; 
+}
+
+//出牌提示
+message QgwCue{
+  optional ErrCode cueStatus  = 1;   //出牌提示状态 “ok” 有牌， “card_not_bigger”没牌
+  repeated uint32 cue = 2;     //有牌的可出牌集
+}
+
+//断线重连数据
+message QgwCache {
+  enum OffLineState {
+    PLAY_CARDS  = 0;    //出牌
+    READY = 1;          //准备阶段
+  }
+  optional OffLineState state  = 1;  //当前状态  
+  optional uint32 currentPlay  = 2;
+  repeated uint32 cards         = 3;  //玩家当前牌
+
+  message CacheInfo{
+    optional uint32 uin = 1;  
+    optional uint32 remain = 2; //剩余牌 
+    repeated uint32 cards  = 3; //上次打的牌
+    optional int32 score = 4; //当前分数
+    optional string cardType = 5; //牌型
+  }
+
+  repeated CacheInfo cacheInfo = 4;  
+
+  optional bool first = 5; //先手
+
+  message ReadyData {
+    optional uint32 uin = 1;
+    optional bool ready = 2;
+  }
+
+  repeated ReadyData readyDatas = 6;
+
+  optional uint32   roundId = 7;
+
+  optional uint32   desktopScore = 8;   //桌面积分
+}
+
+message QgwScore {                 //广播台面积分,与给玩家加积分
+  optional bool isDesktop = 1;  //桌面分数
+  optional uint32  Score = 2; //积分
+  optional uint32  uin = 3;
+}

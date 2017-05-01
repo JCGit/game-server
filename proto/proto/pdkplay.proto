@@ -1,0 +1,136 @@
+package Game;
+
+import "common.proto";
+import "rpc.proto";
+
+service C2SPdkPlay {
+}
+
+service S2CPdkPlay {
+
+}
+
+message PdkRoundState{
+  enum PdkRoundStateType {
+    PDK_ROUND_PLAY = 0;    //出牌
+    PDK_ROUND_ACCOUNTS   = 1;    //单局结算
+  }
+  optional PdkRoundStateType state = 1; 
+}
+
+message PdkRoundPlayerResult{
+  optional uint32 uin = 1;
+  optional int32 score = 2;  //加减积分
+  optional uint32 cards_count = 3;
+  optional uint32 bomb = 4; 
+}
+
+//单局结算
+message PdkRoundResult {
+  repeated  PdkRoundPlayerResult  playerresult  =  1;
+}
+
+//玩家结算信息
+message PdkPlayerAccounts{
+  optional uint32 uin = 1 ;
+  optional int32 score = 2 ;
+  optional string name = 3;
+  optional uint32 winCount = 4;
+  optional uint32 cardsCount = 5;
+  optional uint32 loseCount = 6;
+  optional uint32 bomb = 7;
+}
+
+//房间结算
+message PdkRoomAccounts{
+  repeated  PdkPlayerAccounts playerAccounts = 1;
+  optional  uint32 winnerId = 2;
+  optional  uint32 gameTime = 3; 
+}
+
+//玩家出牌结果
+message PdkPlayCards {
+  enum PdkCardType {
+      NONE = 0;
+      BOMB = 1;
+      PLANE = 2;
+      THREE = 3;
+      STRAIGHT = 4;
+      PAIRS = 5;
+      PAIR = 6;
+      FOUR = 7;
+      SINGLE = 8;
+  }
+  optional  uint32    uin          =  1;
+  repeated  uint32    cards        =  2;
+  optional  PdkCardType  cardType  =  3;
+}
+
+message Cue{
+  optional string card_type = 1;
+  repeated uint32 card_set = 2; 
+}
+
+message PdkOperate {
+  enum PDKOperateType{
+    PDKPLAY = 0;
+    PDKSKIP = 1;
+  }
+  optional PDKOperateType type  = 1;
+  optional uint32      uin    = 2;
+  optional bool  first = 3; //是否为本回合先手
+}
+
+//推送玩家局内状态
+message PdkRoundPlayerState {
+  enum PdkPlayerState {
+    PDKNORMAL = 0;
+    PDKSKIP = 1;
+    PDKPLAY = 2;
+    PDKREADY = 3;
+    PDKNOCARD = 4;
+    PDKSINGLE  = 5;
+  }
+  optional uint32 uin = 1;       
+  optional PdkPlayerState state = 2; 
+}
+
+//断线重连数据
+message PdkCache {
+  enum OffLineState {
+    PLAY_CARDS  = 0;    //出牌
+    READY = 2;          //准备阶段
+  }
+  optional OffLineState state  = 1;  //当前状态  
+  optional uint32 currentPlay  = 2;
+  repeated uint32 cards         = 3;  //玩家当前牌
+
+  message CacheInfo{
+    optional uint32 uin = 1;  
+    optional uint32 remain = 2; //剩余牌 
+    repeated uint32 cards  = 3; //上次打的牌
+    optional int32 score = 4; //当前分数
+    optional string cardType = 5; //牌型
+  }
+
+  repeated CacheInfo cacheInfo = 5;  
+
+  optional bool first = 6; //先手
+
+  message ReadyData {
+    optional uint32 uin = 1;
+    optional bool ready = 2;
+  }
+
+  repeated ReadyData readyDatas = 7;
+  optional uint32   roundId = 8;
+
+  optional uint32  banker = 9; //庄家
+}
+
+//出牌提示
+message PdkCue{
+  optional ErrCode cueStatus  = 1;   //出牌提示状态 “ok” 有牌， “card_not_bigger”没牌
+  repeated Cue cue = 2;     //有牌的可出牌集
+}
+

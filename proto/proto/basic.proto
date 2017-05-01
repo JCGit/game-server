@@ -1,0 +1,289 @@
+package Game;
+
+import "common.proto";
+import "dnplay.proto";
+import "pdkplay.proto";
+import "tegplay.proto";
+import "qgwplay.proto";
+import "rpc.proto";
+
+service C2SBasic {
+  // 创建房间
+  rpc openRoom (C2S_OpenRoom) returns (S2C_OpenRoom) {option(rpcid)=100;}
+
+  // 进入房间
+  rpc enterRoom (C2S_EnterRoom) returns (S2C_EnterRoom) {option(rpcid)=101;}
+
+  // 询问是否有房间缓存信息
+  rpc askRoomCache(EmptyMessage) returns (RoomCache) {option(rpcid)=102;}
+
+  // 离开房间
+  rpc leaveRoom (EmptyMessage) returns (ErrMessage) {option(rpcid)=103;}
+
+  // 发起解散房间投票
+  rpc startVote (EmptyMessage) returns (ErrMessage) {option(rpcid)=104;}
+  
+  //解散房间投票
+  rpc vote(OneVote) returns (ErrMessage) {option(rpcid)=105;}
+
+  //玩家准备
+  rpc playerReady (EmptyMessage) returns (ErrMessage) {option(rpcid)=106;}
+
+  //发送语音
+  rpc voice(Voice) returns (ErrMessage) {option(rpcid) = 107;}
+
+  // 游戏准备(单局点击继续游戏后)
+  rpc gameReady (EmptyMessage) returns (ErrMessage) {option(rpcid)=108;}
+
+  //广播消息
+  rpc fastNews (FastNews) returns (ErrMessage) {option(rpcid) = 109;}
+
+  // 在游戏开始前房主直接解散房间
+  rpc destoryRoom (EmptyMessage) returns (ErrMessage) {option(rpcid)=110; }
+
+  //出牌
+  rpc playCards (Cards) returns (ErrMessage) {option(rpcid)=111; }
+
+  //抢庄
+  rpc rob (Rob) returns (ErrMessage) {option(rpcid) = 112;}
+}
+
+service S2CBasic {
+  // 推送房间用的户信息
+  rpc pushPlayers (Players) returns (NilMessage) {option(rpcid)=150;}
+
+  // 推送房间用户状态变化
+  rpc pushPlayerState (PlayerState) returns (NilMessage) {option(rpcid)=151;}
+
+  // 推送房间的状态变化
+  rpc pushRoomState (RoomState) returns (NilMessage) {option(rpcid)=152;}
+
+  // 推送发起投票
+  rpc pushVote (Vote) returns (NilMessage) {option(rpcid)=153;}
+
+  // 推送投票的结果
+  //rpc pushVoteResult (VoteResult) returns (NilMessage) {option(rpcid)=154;}
+
+  // 推送投票结束
+  rpc pushVoteEnd (VoteEnd) returns (NilMessage) {option(rpcid)=155;}
+
+  // 广播语音
+  rpc pushVoice(Voice) returns (NilMessage) {option(rpcid) = 156;}
+
+  //广播消息
+  rpc pushFastNews (PushFastNews) returns (NilMessage) {option(rpcid) = 157;}
+
+  //推送一局开始
+  rpc pushRoundStart (RoundStart) returns (NilMessage) {option (rpcid) = 158;}
+
+  //推送对局中玩家状态
+  rpc pushRoundPlayerState (RoundPlayerState) returns (NilMessage) {option (rpcid) = 159;}
+
+  //推送玩家操作
+  rpc pushPlayerOperate (PlayerOperate) returns (NilMessage) {option (rpcid) = 160;}
+
+  //推送一局结束
+  rpc pushRoundStoped (RoundSum) returns (NilMessage) {option (rpcid) = 161;}
+
+  //推送房间状态
+  rpc pushRoundStates (RoundState) returns (NilMessage) {option(rpcid) = 162;}
+
+  //推送整局
+  rpc pushRoomStop (RoomResult) returns (NilMessage) {option (rpcid) = 163;}
+
+  //推送出牌
+  rpc pushPlayCards(PlayCards) returns (NilMessage) {option(rpcid) = 164;}
+
+  //推送抢庄
+  rpc pushRob(Rob) returns (NilMessage) {option(rpcid) = 165;}
+
+  //推送明牌
+  rpc pushShowCards (Cards) returns (EmptyMessage) {option(rpcid) = 166;}  
+
+  //推送牌 可应用于多种场景 ps:地主牌
+  rpc pushCards (Cards) returns (EmptyMessage) {option(rpcid) = 167;} 
+
+  //推送提示
+  rpc pushCue (Cues) returns (EmptyMessage) {option(rpcid) = 168;}   
+
+  //断线重连缓存数据
+  rpc pushCache (Cache) returns (EmptyMessage) {option(rpcid) = 169;}
+}
+
+message Vote {
+  optional  uint32   uin          =  1;  //  发起投票用户
+  optional  uint32   resultTime  =  2;  //  结束整个投票时间
+}
+
+message OneVote {
+  optional  uint32  uin       =  1;  // 投票用户(请求可以不填)
+  optional  bool    agree    =  2;  // 选择
+}
+
+message VoteEnd {
+  optional  uint32  status = 1; //1投票完成--解散  2投票完成--不解散
+  repeated OneVote  votes = 2;
+}
+
+message VoteResult {
+  repeated OneVote votes = 1;
+}
+
+message RoomState {
+  enum RoomStateType {
+    ROOM_READY_GAME = 0;    // 开始游戏
+    ROOM_DESTORY    = 1;    // 房间销毁
+  }
+  optional RoomStateType state = 1;
+}
+
+message PlayerState {
+  enum PlayerStateType {
+    PLAYER_STATE_START      = 0;  // 开始状态
+    PLAYER_STATE_OFFLINE    = 1;  // 断线状态
+    PLAYER_STATE_SIT        = 2;  // 坐下
+    PLAYER_STATE_EXIT       = 3;  // 退出游戏
+  }
+  optional  PlayerStateType  state    =  1;
+  optional  uint32           uin       =  2;
+}
+
+message LeaveRoomRes {
+  optional ErrCode status = 1;
+}
+
+message RoomPlayer {
+  optional  uint32  seatID    =  1;   // 座位号
+  optional  string  name   =  2;   // 昵称
+  optional  uint32  sex        =  3;   // 性别
+  optional  string  imgurl =  4;   // 头像地址
+  optional  uint32  uin         =  5;
+  optional  bool    owner      =  6;
+  optional  string  ip         =  7;
+  optional  bool    offline     =  8;  //是否离线
+  optional  string  openid      =  9;
+}
+
+message Players {
+  repeated  RoomPlayer  players  =  1;
+}
+
+message C2S_OpenRoom {
+  optional GameType  gameType = 1;
+  optional RoomType  roomType = 2;  // 房卡消耗类型
+  optional string    rules = 3;     //开房规则，每个游戏自己去做控制, "{roomType:1,  dealerType:2, dealerMin:3, publicMaxChip:4}"  
+}
+
+message S2C_OpenRoom {
+  optional  ErrCode  status  =  1;  // 状态码 0返回正确，2返回房卡不足 3返回已经在房间中 
+  optional  string   roomID =  2;  //  房间id
+}
+
+message C2S_EnterRoom {
+  optional string roomID = 1;
+  optional bool retry = 2; //重连标志
+}
+
+message PushOffLine {
+  optional uint32 uin = 1;
+}
+
+message PushOnLine {
+  optional uint32 uin = 2;
+}
+
+message S2C_EnterRoom {
+  optional  ErrCode     status     =  1;  //状态码  0返回正确，1返回房间不存在
+  optional  uint32      seatID     =  2;
+  optional  RoomType    roomType   =  3;
+  optional  string      roomID     =  4;
+  optional  string      special    =  5;  //各个游戏的特征数据 {"dealMin": 1, "publicMaxChip":2}
+  optional  GameType    gameType   =  6;
+}
+
+message RoomCache {
+  optional GameType gameType = 1;
+  optional string roomID  = 2;
+}
+ 
+message Voice {
+  optional string data = 1;
+  optional uint32 uin  = 2;
+}
+
+message FastNews{
+  optional uint32 id = 1;
+}
+
+message PushFastNews{
+  optional uint32 uin = 1;
+  optional uint32 id = 2;
+}
+
+//玩家操作
+message PlayerOperate {
+  optional DnOperate  bull  = 1;
+  optional PdkOperate pdk = 2;
+  optional TegOperate teg = 3;
+  optional QgwOperate qgw = 4;
+}
+
+//单局结算
+message RoundSum {
+  optional DnRoundResult  bull  = 1;
+  optional PdkRoundResult pdk = 2;
+  optional TegRoundResult teg = 3;
+  optional QgwRoundResult qgw = 4;
+}
+
+//对局状态
+message RoundState {
+  optional DnRoundState  bull  = 1;
+  optional PdkRoundState pdk = 2;
+  optional TegRoundState teg = 3;
+  optional QgwRoundState qgw = 4; 
+}
+
+//房间结算
+message RoomResult {
+  optional DnRoomAccounts  bull  = 1;
+  optional PdkRoomAccounts pdk = 2;
+  optional TegRoomAccounts teg = 3;
+  optional QgwRoomAccounts qgw = 4;
+}
+
+message RoundPlayerState {
+  optional DnRoundPlayerState  bull  = 1;
+  optional PdkRoundPlayerState pdk = 2;
+  optional TegRoundPlayerState teg = 3;
+  optional QgwRoundPlayerState qgw = 4; 
+}
+
+message PlayCards {
+  optional DnPlayCards  bull  = 1;
+  optional PdkPlayCards pdk = 2;
+  optional TegPlayCards teg = 3;
+  optional QgwPlayCards qgw = 4;
+}
+
+//抢庄
+message Rob{
+  optional uint32 power = 1;
+  optional bool skip    = 2; //是否跳过抢庄  
+}
+
+
+message Cache {
+  optional DnCache bull = 1;
+  optional PdkCache pdk = 2;
+  optional TegCache teg = 3;
+  optional QgwCache qgw = 4;
+}
+
+//出牌提示
+message Cues{
+  optional PdkCue pdk = 1;
+  optional TegCue teg = 2;
+  optional QgwCue qgw = 3;
+}
+

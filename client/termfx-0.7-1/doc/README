@@ -1,0 +1,523 @@
+# README #
+
+## TermFX ##
+
+Author: Gunnar Zötl , 2014-2015.  
+Released the terms of the MIT license. See file LICENSE for details.
+
+## Introduction ##
+
+TermFX is a library for fancy terminal output based on termbox. It means
+to reduce the weirdness termbox has in places, and provide some additional
+utilities like offscreen buffers, and generally a more lua like interface.
+TermFX has been tested with lua 5.1 to 5.3 beta on Linux and Mac OS X.
+
+Basic usage is very similar to termbox, but also different enough that it
+warrants some of its own documentation.
+
+Like in termbox, the screen is made up of cells, each consisting of a
+character, a foreground- and a background attribute. For an explanation
+of these see `termfx.attribute()`. Unlike termbox, the top left coordinate
+is 1, 1, and named colors work in all output modes.
+
+All rendering is done into a buffer, whose contents is then drawn to the
+actual display using the function `termfx.present()`. In the following
+discussion of the functions, when I write that something operates on the
+terminal, it actually operates on this buffer.
+
+## Installing ##
+
+The version of termbox I built this against is included in the archive.
+So all you need to do is to cd into the source directory and call
+
+    make && make install
+
+If you want to build termfx against a newer version of termbox, just type
+
+	make distclean
+
+That will remove the termbox subdirectory. If you subsequently call make,
+the most recent version of termbox will be pulled from the github repo.
+If you don't have git installed, you can download the most recent termbox
+branch from <https://github.com/nsf/termbox/archive/master.zip>, unpack
+it into the source directory, rename the resulting `termbox-master` directory
+to termbox, and then the above should work.
+
+When using luarocks, a simple
+
+	luarocks install termfx
+
+should do the trick, or alternatively, if you've already downloaded it,
+enter the source directory and type
+
+	sudo luarocks make
+
+which should do what you want. Again, if you want to build against a more
+recent version of termbox than the included, just call `make distclean`
+before that, and all should be well.
+
+## Using ##
+
+Load the module with:
+
+    termfx = require "termfx"
+
+You must call `termfx.init()` before you can do any output. At the end of
+your program, you should call `termfx.shutdown()`, however, the library
+registers an atexit handler that does this when the interpreter exits,
+if it has not been done before.
+
+All coordinates on termfx are 1-based, meaning the top left corner of
+the terminal has the coordinates 1, 1 and the bottom right corner has
+the coordinates `termfx.width()`, `termfx.height()`.
+
+Note that `termfx.init()` sets the terminal into a mode where you can no
+longer see any error messages the program might throw. It is therefore
+recommended that, at least during development, you wrap your main loop
+into a pcall()ed function, like so:
+
+	termfx.init()
+    ...
+    ok, err = pcall(function()
+		repeat
+			evt = termfx.pollevent()
+			...
+		until some_exit_condition
+    end)
+    termfx.shutdown()
+    if not ok then print("Error: "..err) end
+
+### Functions ###
+
+#### Main functions ####
+
+`termfx.init()`
+:	initializes the library and the display. `termfx.init()` may fail
+	and in that case throws an error. All of the other functions, except for
+	buffer and cell constructors and methods, work only after the terminal
+	has been initialized using this function, and will silently fail, or in
+	the case of queries return nil, if that is not the case. Because of this,
+	you can for example check whether the terminal has been initialized by
+	querying its width and checking the result against nil.
+
+`termfx.shutdown()`
+:	shuts the library down and puts the terminal into a sane mode for
+	normal usage.
+
+`w = termfx.width()`
+:	returns the width of the terminal.
+
+`h = termfx.height()`
+:	returns the height of the terminal.
+
+`w, h = termfx.size()`
+:	returns width and height of the terminal.
+
+`termfx.clear([fg, bg])`
+:	clears the terminal. If no arguments are given, the default
+	foreground and background attributes are used (see
+	`termfx.attributes()`), otherwise the default attributes are set
+	from the arguments passed to `termfx.clear()` and then used.
+
+`fg, bg = termfx.attributes([fg, bg])`
+:	sets or, if called without arguments, gets the default foreground
+	and background attributes. Attributes are colors and formatting like
+	bold or underline. Colors are simple integers in the range 0-255, or
+	one of the color constants from `termfx.color`, and formatting is one
+	or more of the constants from `termfx.format`. Attributes and
+	constants can be added together for the final foreground or
+	background attribute. Returns the default foreground and background
+	attributes, or those just set.
+
+`col = termfx.rgb2color(r, g, b)`
+:	maps a set of rgb values to a xterm color number. r, g, b must be in
+	the range 0..5, which makes up the 216 available colors. Returns a
+	color number, which is corrected for the output mode in use, or nil
+	if the input could not be mapped to a color number. This function
+	only works in `termfx.output.COL216` and `termfx.output.COL256`
+	modes, in the other modes it will always return nil.
+
+`col = termfx.grey2color(v)`
+:	maps a single greyscale value to an xterm color number. v must be in
+	the range 0..25, which makes for 26 grey values. Returns a color
+	number, which is corrected for the output mode in use, or nil if the
+	input could not be mapped to a color number. This function only
+	works in `termfx.output.COL256` and `termfx.output.GREYSCALE` modes,
+	in the other modes it will always return nil. Also, as in
+	`tfx.output.GREYSCALE` mode there are only 24 available grey values,
+	the values 0 and 1 map to the same color number, as do 24 and 25.
+
+`value, r, g, b = termfx.colorinfo(n)`
+:	returns the color value (a rgb string with format "#abcdef") and
+	red, green and blue values for a color number. The range of n
+	depends on the current output mode:
+
+	* 0..255 for `termfx.output.COL256`
+	* 0..215 for `termfx.output.COL216`
+	* 0..23 for `termfx.output.GREYSCALE`
+	* 0..15 for `termfx.output.NORMAL`
+	
+	For values outside of the valid range for the current output mode,
+	the function will return nil.
+
+`termfx.present()`
+:	output the contents of TermFX's back buffer, into which the
+	rendering is done, to the terminal.
+
+`termfx.setcursor(x, y)`
+:	sets the cursor to position x, y and unhides it.
+
+`termfx.hidecursor()`
+:	hides the cursor.
+
+`cel = termfx.newcell([, ch [, fg [, bg]]])`
+:	creates a new offscreen cell. You can use cells in functions like
+	`termfx.setcell()` or `termfx.rect()`. If you pass any or all of the
+	arguments, they are used in the construction of the cell, otherwise
+	the respective values default to space (' ') for the char, and the
+	default foreground and background attributes. The returned cell has
+	3 attributes you can read or set, which are ch, fg and bg. For more
+	information see the section on TermFX's cells below.
+
+`termfx.setcell(x, y [, cel])` or `termfx.setcell(x, y [, ch [, fg [, bg]]])`
+:	sets the cell with the coordinates x, y on the terminal. For the
+	cells attributes, you can pass in a cell as created by
+	`termfx.newcell()`, or values. If you pass any or all of the arguments,
+	they are used for the cell on the terminal, otherwise the respective
+	values default to space (' ') for the char, and the default
+	foreground and background attributes.
+
+`cel = termfx.getcell(x, y)`
+:	gets the cell from the coordinates x, y on the terminal. If x or y lie
+	outside of the terminal, nil is returned.
+
+`buf = termfx.newbuffer(w, h)`
+:	creates a new offscreen buffer with width w and height h. The new
+	buffer gets the default foreground and background attributes as its
+	local defaults. This may be changed with a method call on the buffer.
+	For more information see the section on buffer methods below.
+
+`termfx.blit(x, y, buf)`
+:	blits the contents of the buffer to the terminal placing the buffers
+	top left corner at the coordinates x, y.
+
+`termfx.rect(x, y, w, h [, cel])` or `ok = termfx.rect(x, y, w, h [, ch [, fg [, bg]]])`
+:	draws a rectangle on the terminal with top left at x, y and width w
+	and height h.  For the rectangles attributes, you can pass in a cell
+	as created by `termfx.newcell()`, or the values. If you pass any or
+	all of the arguments, they are used for the rectangle on the
+	terminal, otherwise the respective values default to space (' ') for
+	the char, and the default foreground and background attributes.
+
+`termfx.copyregion(tx, ty, x, y, w, h)`
+:	copy the the rectangle starting at x, y with width w and height h to
+	position tx, ty on the terminal. Source and target rectangle may overlap.
+
+`termfx.scrollregion(x, y, w, h [, sx [, sy]])`
+:	scrolls the rectangle starting at x, y with width w and height h on the
+	terminal by sx and sy. sx and sy are optional and default to 0. If they
+	have other values, only their sign is used. Scrolling is by 1 column or
+	row at most.
+
+`termfx.printat(x, y, what [, w])`
+:	prints a string to the terminal at position x, y up to maximum width
+	w. If w is omitted, it defaults to the length of what. what can be a
+	string, or a table of cells. If it is a string, it is printed in the
+	default foreground and background colors, if it is a table of cells,
+	the char and attributes from each cell are used.
+
+`mode = termfx.inputmode([newmode])`
+:	sets the terminal input mode. Valid modes are `termfx.input.ESC`,
+	`termfx.input.ALT`. If the newmode argument was not given, returns
+	the current input mode, otherwise returns the mode just set.
+	
+	Modes are:
+
+	* `termfx.input.ESC`: when an ESC sequence is in the buffer and it
+		doesn't match any known ESC sequence, ESC means `termfx.key.ESC`
+	* `termfx.input.ALT`: when an ESC sequence is in the buffer and it
+		doesn't match any known sequence, ESC enables `"ALT"` modifier for
+		the next keyboard event.
+	* `termfx.input.MOUSE`: specify this if you are interested in mouse
+		events. This can be added / or'ed to `termfx.input.ESC` or
+		`termfx.input.ALT`
+
+`mode = termfx.outputmode([newmode])`
+:	sets the terminal output mode. See the section on colors and
+	attributes below. If the newmode argument was not given, returns the
+	current output mode, otherwise returns the mode just set.
+
+`evt = termfx.pollevent([timeout])`
+:	waits for an event to occur. If the timeout argument is given, the
+	function will time out after timeout milliseconds, otherwise it will
+	wait forever. On Timeout, the function returns nil, on error it
+	returns nil+error message, otherwise it returns a table with
+	information about the event. Known events are `"key"` for a keyboard
+	event, `"mouse"` for a mouse event or `"resize"` if the terminal was
+	resized. Depending on which event occurred, the result table looks
+	like this:
+
+	For the event `"key"`:
+
+	* `type`: `"key"`
+	* `elapsed`: the number of milliseconds spent in `termfx.pollevent()`
+	* `mod`: `nil` or `"ALT"`, no other modifiers are returned
+	* `key`: the numeric code of the key pressed, if it was a special key
+	* `ch`: the numeric code of the key pressed for standard keys
+	* `char`: the char (possibly utf8 encoded) for ch
+
+	either the field `key` or the field `ch` is nil. If the `key` field is
+	not nil, it can be checked against one of the constants in `termfx.key`.
+	If the `ch` field is not nil, it is the unicode value of the char that
+	was pressed on the keyboard. In that case, the `char` field will
+	contain a string containing the character represented by `ch`.
+
+	For the event `"mouse"`:
+
+	* `type`: `"mouse"`
+	* `elapsed`: the number of milliseconds spent in `termfx.pollevent()`
+	* `key`: the numeric code of the button pressed
+	* `x`, `y`: the terminal coordinates where the mouse event occurred.
+
+	on release of any button, the value of key will be
+	termfx.key.MOUSE_RELEASED
+
+	For the event `"resize"`:
+
+	* `type`: `"resize"`
+	* `elapsed`: the number of milliseconds spent in `termfx.pollevent()`
+	* `w`: the new width
+	* `h`: the new height
+
+#### Buffer methods ####
+
+The buffer created by `termfx.newbuffer()` has a few methods associated
+with it. They work just like their global counterparts, only on the
+buffer on which they are called. So for a detailed description of the
+individual methods see above.
+
+`buf:attributes([bg, fg])`
+:	set or get default cell attributes for the buffer.
+
+`buf:clear([fg, bg])`
+:	clear the buffer.
+
+`buf:setcell(x, y [, cel]) or buf:setcell(x, y [, ch [, fg [, bg]]])`
+:	set a cell in the buffer.
+
+`cel = buf:getcell(x, y)`
+:	gets a cell from a buffer.
+
+`buf:blit(x, y, src)`
+:	blits the contents of the buffer src to position x, y of buffer buf.
+
+`buf:rect(x, y, w, h [, cel]) or ok = buf:rect(x, y, w, h [, ch [, fg [, bg]]])`
+:	draw a rectangle in the buffer.
+
+`buf:copyregion(tx, ty, x, y, w, h)`
+:	copy a region of the buffer.
+
+`buf:scrollregion(x, y, w, h [, sx [, sy]])`
+:	scrolls a region of the buffer.
+
+`buf:printat(x, y, what [, w])`
+:	print a string to the buffer.
+
+`w = buf:width()`
+:	return the buffer width.
+
+`h = buf:height()`
+:	return the buffer height.
+
+`w, h = buf:size()`
+:	return the buffer width and height.
+
+### Colors and attributes ###
+
+How TermFX handles colors depends on the chosen output mode. There are a
+few functions to help you with the colors, these are `termfx.rgb2color()`,
+`termfx.grey2color()`and `termfx.colorinfo()`, see the function list
+above for an explanation of those functions. They work based on the
+standard xterm colormap. If, for some reason, you have a different
+colormap, these functions will not give you the results you want.
+
+There are 8 predefined colors, which are available in all output modes:
+
+* `termfx.color.BLACK`
+* `termfx.color.RED`
+* `termfx.color.GREEN`
+* `termfx.color.YELLOW`
+* `termfx.color.BLUE`
+* `termfx.color.MAGENTA`
+* `termfx.color.CYAN`
+* `termfx.color.WHITE`
+
+The output modes are:
+
+`termfx.output.NORMAL`
+:	this is an 8 color mode, in which only the 8 predefined colors are
+	available as colors 1-8, plus a default color at position 0.
+
+`termfx.output.COL256`
+:	this is a mode with 256 colors.
+	* the first 8 colors (0-7) are the 8 predefined colors.  
+	* the next 8 colors (8-15) are the first 8 colors + `termfx.attr.BOLD`  
+	* then (16-231) follow 216 different colors  
+	* finally (232-255) 24 shades of grey
+
+`termfx.output.COL216`
+:	this is a mode that supports only the 3rd range of `COL256`, i.e. 216
+	different colors, but ranging from 0-215. The 8 default colors are
+	mapped to their closest representations in the palette.
+
+`termfx.output.GRAYSCALE`
+:	this is a mode in which only the 4th range from `COL256` is available,
+	i.e. 24 shades of grey. but ranging from 0-23. The 8 default colors
+	are mapped to grey values.
+
+A table of the colors available for xterms is available here:  
+<https://en.wikipedia.org/wiki/Xterm_%28software%29#mediaviewer/File:Xterm_256color_chart.svg>
+
+The behaviour of the predefined colors is different from termbox, where
+they only make sense for the `NORMAL` output mode. But this means that
+they need to be determined for each output mode, which means that when
+you for some reason cache the values from `termfx.color` or use them in
+a buffer or a cell, and then switch output modes, you will need to
+re-cache them, as they will have changed.
+
+In addition to colors, cells can also have formatting attributes:
+
+* `termfx.format.BOLD`
+* `termfx.format.UNDERLINE`
+* `termfx.format.REVERSE`
+
+In order to construct a cell attribute, you can start with a color and
+just add the desired formatting options to it (but only once, because,
+of course, they are actually meant to be or'ed to the color)
+
+### Key Constants ###
+
+When `termfx.pollevent()` returns with a type field of "key" and its key
+field set, then the value in the key field may be checked against one of
+the constants in `termfx.key`, as listed below. However, due to window
+managers interfering and whatnot, not all of these special keys may be
+available to your terminal.
+
+* `termfx.key.F1`
+* `termfx.key.F2`
+* `termfx.key.F3`
+* `termfx.key.F4`
+* `termfx.key.F5`
+* `termfx.key.F6`
+* `termfx.key.F7`
+* `termfx.key.F8`
+* `termfx.key.F9`
+* `termfx.key.F10`
+* `termfx.key.F11`
+* `termfx.key.F12`
+* `termfx.key.INSERT`
+* `termfx.key.DELETE`
+* `termfx.key.HOME`
+* `termfx.key.END`
+* `termfx.key.PGUP`
+* `termfx.key.PGDN`
+* `termfx.key.ARROW_UP`
+* `termfx.key.ARROW_DOWN`
+* `termfx.key.ARROW_LEFT`
+* `termfx.key.ARROW_RIGHT`
+* `termfx.key.CTRL_TILDE`
+* `termfx.key.CTRL_2`
+* `termfx.key.CTRL_A`
+* `termfx.key.CTRL_B`
+* `termfx.key.CTRL_C`
+* `termfx.key.CTRL_D`
+* `termfx.key.CTRL_E`
+* `termfx.key.CTRL_F`
+* `termfx.key.CTRL_G`
+* `termfx.key.BACKSPACE`
+* `termfx.key.CTRL_H`
+* `termfx.key.TAB`
+* `termfx.key.CTRL_I`
+* `termfx.key.CTRL_J`
+* `termfx.key.CTRL_K`
+* `termfx.key.CTRL_L`
+* `termfx.key.ENTER`
+* `termfx.key.CTRL_M`
+* `termfx.key.CTRL_N`
+* `termfx.key.CTRL_O`
+* `termfx.key.CTRL_P`
+* `termfx.key.CTRL_Q`
+* `termfx.key.CTRL_R`
+* `termfx.key.CTRL_S`
+* `termfx.key.CTRL_T`
+* `termfx.key.CTRL_U`
+* `termfx.key.CTRL_V`
+* `termfx.key.CTRL_W`
+* `termfx.key.CTRL_X`
+* `termfx.key.CTRL_Y`
+* `termfx.key.CTRL_Z`
+* `termfx.key.ESC`
+* `termfx.key.CTRL_LSQ_BRACKET`
+* `termfx.key.CTRL_3`
+* `termfx.key.CTRL_4`
+* `termfx.key.CTRL_BACKSLASH`
+* `termfx.key.CTRL_5`
+* `termfx.key.CTRL_RSQ_BRACKET`
+* `termfx.key.CTRL_6`
+* `termfx.key.CTRL_7`
+* `termfx.key.CTRL_SLASH`
+* `termfx.key.CTRL_UNDERSCORE`
+* `termfx.key.SPACE`
+* `termfx.key.BACKSPACE2`
+* `termfx.key.CTRL_8`
+
+If mouse support is available, you also have these constants:
+
+* `termfx.key.MOUSE_LEFT`
+* `termfx.key.MOUSE_MIDDLE`
+* `termfx.key.MOUSE_RIGHT`
+* `termfx.key.MOUSE_RELEASE`
+* `termfx.key.MOUSE_WHEEL_UP`
+* `termfx.key.MOUSE_WHEEL_DOWN`
+
+### Unicode ###
+
+TermFX works with utf8 or plain 8 bit encoded charsets. Apart from the
+encoding, TermFX makes no assumptions about the characters in a string.
+Of course, in order to use utf8, the terminal has to support unicode. If
+you need to manipulate utf8 encoded strings, use either lua 5.3 or a
+proper utf8 library like
+[luautf8](https://github.com/starwing/luautf8 "luautf8").
+
+### Example ###
+
+A very simple program using this library might look like this:
+
+	tfx = require "termfx"
+	tfx.init()
+	tfx.clear(tfx.color.WHITE, tfx.color.BLACK)
+	s = "Hello World"
+	x = math.floor((tfx.width() - #s) / 2)
+	y = math.floor(tfx.height() / 2)
+	for i=1, #s do
+		tfx.setcell(x, y, string.sub(s, i, i))
+		x = x + 1
+	end
+	tfx.present()
+	
+	quit = false
+	repeat
+		evt = tfx.pollevent()
+		quit = evt.char == "q"
+	until quit
+	tfx.shutdown()
+
+You can find more examples in the samples directory.
+
+## References ##
+
+This is built using termbox, so when in doubt, a look at its
+documentation may help. Said documentation is contained within the file
+termbox.h, which can be found here:
+
+<https://github.com/nsf/termbox/blob/master/src/termbox.h>

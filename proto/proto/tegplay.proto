@@ -1,0 +1,163 @@
+package Game;
+
+import "common.proto";
+import "rpc.proto";
+
+service C2STegPlay {
+}
+
+service S2CTegPlay {
+  //广播叫倍后游戏赢的类型与叫倍胜出玩家
+  rpc robStop (RobStop) returns (NilMessage) { option(rpcid) = 170; } 
+
+}
+
+message TegRoundPlayerResult{
+  optional uint32 uin = 1;
+  optional int32 score = 2;  //加减积分
+  optional uint32 bomb = 3;
+}
+
+//单局结算
+message TegRoundResult {
+  repeated  TegRoundPlayerResult  playerresult  =  1;
+}
+
+//玩家结算信息
+message TegPlayerAccounts{
+  optional uint32 uin = 1 ;
+  optional int32 score = 2 ;
+  optional string name = 3;
+  optional uint32 winCount = 4;
+  optional uint32 loseCount = 5;
+  optional uint32 bomb = 6;
+}
+
+//房间结算
+message TegRoomAccounts{
+  repeated  TegPlayerAccounts playerAccounts = 1;
+  optional  uint32 winnerId = 2;
+  optional  uint32 gameTime = 3;
+}
+
+//玩家出牌结果
+message TegPlayCards {
+  enum TegCardType{
+      NONE = 0;
+      BOMB = 1;
+      PLANE = 2;
+      THREE = 3;
+      STRAIGHT = 4;
+      PAIRS = 5;
+      PAIR = 6;
+      FOUR = 7;
+      SINGLE = 8;
+  }
+  optional  uint32    uin          =  1;
+  repeated  uint32    cards        =  2;
+  optional  TegCardType  cardType  =  3;
+}
+
+enum TegOperateType{
+  TEG_PLAY = 0;
+  TEG_ROB = 1;
+  TEG_SKIP = 2;
+}
+
+message TegOperate {
+  optional TegOperateType type = 1;
+  optional uint32 uin = 2;
+  repeated uint32 canOper = 3;
+  optional bool  first = 4; //是否为本回合先手
+}
+
+//推送玩家局内状态
+message TegRoundPlayerState{
+  enum TegPlayerState{
+    TEG_NORMAL = 0;
+    TEG_ROB = 1;
+    TEG_ROB_SKIP = 2;
+    TEG_PLAY = 3;
+    TEG_READY = 4;
+    TEG_NOCARD = 5;
+    TEG_SINGLE = 6;
+    TEG_PLAY_SKIP = 7;
+  }
+  optional uint32 uin = 1;       
+  optional TegPlayerState state = 2;
+  optional uint32 num = 3;
+}
+
+message TegPlayerCards{
+  optional uint32 uin = 1;
+  repeated uint32 cards = 2;
+}
+
+message TegRoundState{
+  enum TegRoundStateType {
+    TEG_ROUND_ROB        = 0;    //叫倍
+    TEG_ROUND_PLAY = 1;    //出牌
+    TEG_ROUND_ACCOUNTS   = 2;    //单局结算
+  }
+  optional TegRoundStateType state = 1; 
+}
+
+//出牌提示
+message TegCue{
+  message Cue{
+    optional string card_type = 1;
+    repeated uint32 card_set = 2; 
+  }
+  optional ErrCode cueStatus  = 1;   //出牌提示状态 “ok” 有牌， “card_not_bigger”没牌
+  repeated Cue cue = 2;     //有牌的可出牌集
+}
+
+//断线重连数据
+message TegCache {
+  enum OffLineState {
+    PLAY_CARDS  = 0;    //出牌
+    ROB = 1;            //叫倍
+    READY = 2;          //准备阶段
+  }
+  optional OffLineState state  = 1;  //当前状态  
+  optional uint32 currentPlay  = 2;
+  repeated uint32 cards         = 3;  //玩家当前牌
+
+  message RobData {
+    optional uint32 uin = 1;
+    optional uint32 rob = 2;
+    optional bool isSkip = 3;
+  }
+  repeated RobData robData = 4;   //玩家叫倍数据
+
+  message CacheInfo{
+    optional uint32 uin = 1;  
+    optional uint32 remain = 2; //剩余牌 
+    repeated uint32 cards  = 3; //上次打的牌
+    optional int32 score = 4; //当前分数
+    optional string cardType = 5; //牌型
+  }
+
+  repeated CacheInfo cacheInfo = 5;  
+
+  optional bool first = 6; //先手
+
+  message ReadyData {
+    optional uint32 uin = 1;
+    optional bool ready = 2;
+  }
+
+  repeated ReadyData readyDatas = 7;
+  optional uint32   roundId = 8;
+  optional uint32  banker = 9; //庄家
+}
+
+message RobStop {
+  enum WIN_MODE {
+    SPRING = 0;
+    OTHER = 1;
+  }
+  optional WIN_MODE winMode = 1;
+  optional uint32 rob = 2;
+  optional uint32 banker = 3;
+}

@@ -1,0 +1,78 @@
+package Game;
+
+import "rpc.proto";
+
+
+// 不存在的消息，这个消息没有对应的请求/返回值
+message NilMessage {}
+
+// 空消息 相当于没有参数rpc
+message EmptyMessage {}
+
+// 状态消息
+message ErrMessage {
+  optional ErrCode status = 1;
+}
+
+enum ErrCode {
+  ok                         =  0;    //  成功
+  lack_ticket                =  2;    //  缺少房卡
+  already_in_room            =  3;    //  已经在房间中
+  not_room_owner             =  4;    //  非房主
+  not_your_op_order          =  5;    //  没有轮到你操作
+  not_op_type                =  6;    //  非现在可操作类型
+  not_in_room                =  7;    //  不在房间内
+  not_public                 =  8;    //  本房间没有公海
+  public_power_upper_limit   =  9;    //  公海下注达上限
+  have_beted                 =  10;   //  已下注过
+  round_flow                 =  11;   //  流局
+  first_must_play            =  12;   //  先手必须出
+  not_your_operate           =  13;   //  当前非你操作
+  card_wrong_type            =  14;   //  牌型错误
+  card_not_bigger            =  15;   //  牌打不过上家
+  must_play                  =  16;   //  必须出牌
+  
+  room_waiting               =  50;    //  房间处于等待状态
+  room_running               =  51;    //  房间处于游戏状态
+  room_voteing               =  52;    //  房间处于投票状态
+  room_exiting               =  53;    //  房间处于销毁状态
+
+  room_full                  =  60;    //  房间已满
+  room_not_exist             =  61;    //  房间不存在
+  room_have_voted            =  62;    //  已经投过票了
+
+  game_none                  =  100;    //  游戏尚未开始
+  game_started               =  101;    //  游戏开始，随机位置
+  round_running              =  105;    //  正在打牌
+  round_suspending           =  106;    //  游戏暂停
+  round_stoped               =  107;    //  正在结算
+  game_stoped                =  108;    //  游戏结束
+}
+
+enum RoomType {
+  FIVE_ROUNDS = 0; // 5局
+  TEN_ROUNDS = 1;  // 10局
+  TWN_ROUNDS = 2;  // 20局
+}
+
+// 游戏类型
+enum GameType {
+  DN_GAME   = 0;
+  PDK_GAME  = 1;
+  TEG_GAME  = 2;
+  QGW_GAME   = 3;
+}
+
+//玩家的牌
+message Cards {
+  repeated uint32 cards =  1;
+  optional uint32 uin    =  2;
+}
+
+//单局开始
+message RoundStart {
+  optional uint32  roundId  = 1;
+  repeated uint32  cards = 2;
+  optional uint32  banker = 3;
+}
+

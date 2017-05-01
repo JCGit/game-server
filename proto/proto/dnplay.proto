@@ -1,0 +1,181 @@
+package Game;
+
+import 'common.proto';
+import "rpc.proto";
+
+service C2SPlay {
+  //下注
+  rpc bet (Bet) returns (ErrMessage) {option(rpcid) = 204;}
+
+  rpc roundStop (EmptyMessage) returns (ErrMessage) {option(rpcid) = 205;}     //搓牌结束告知服务器单局结束
+}
+
+service S2CPlay {
+  //局内玩家状态
+  //rpc pushPlayerStatus (PushPlayerStatus) returns (NilMessage) {option(rpcid) = 210;}
+
+  //亮牌
+  rpc pushshowcard (PushShowCard) returns (NilMessage) {option(rpcid) = 211;}
+
+  // 推送该由谁操作
+  //rpc pushOperate (Operate) returns (NilMessage) {option(rpcid) = 251;}
+
+  //rpc roundStart (RoundStart) returns (NilMessage) {option(rpcid) = 252;}
+
+  // 推送牌
+  //rpc pushCard (PushCard) returns (NilMessage) {option(rpcid) = 253;}
+
+  //推送一局结束
+  //rpc pushRoundStop (RoundResult) returns (NilMessage) {option(rpcid) = 256;}
+
+  //rpc pushRoomAccounts (RoomAccounts) returns (NilMessage) {option(rpcid) = 257;}
+
+  //推送缓存数据给重连玩家
+  //rpc pushOffLineCache (OffLineCache) returns (NilMessage) {option(rpcid) = 258;}
+
+  //rpc pushRoundState (PushRoundState) returns (NilMessage) {option(rpcid) = 259;}
+
+}
+
+//斗牛牛类型
+enum DN_NIUType{
+  NIU_NIU = 0;
+  NIU_FULL = 1;
+  NIU_TEN = 2;
+  NIU_NINE = 3;
+  NIU_SMALL = 4;
+}
+
+message DnRoundPlayerResult{
+  enum Result{
+    WIN = 0;
+    TIE = 1;
+    LOSE = 2;
+  }
+  optional Result result = 1;
+  optional uint32 uin = 2;
+  optional int32 modifyscore = 3;  //加减积分
+  repeated uint32 cards = 4;
+  optional int32 publicscore = 5;   //公海加减积分
+  optional DN_NIUType niutype = 6;
+  optional uint32 sum = 7;
+}
+
+//单局结算
+message DnRoundResult {
+  repeated  DnRoundPlayerResult  playerresult  =  1; 
+}
+
+//玩家结算信息
+message DnPlayerAccounts{
+  optional uint32 uin = 1 ;
+  optional int32 modifyscore = 2 ;
+  repeated uint32 niucount = 3 ;
+}
+
+//房间结算
+message DnRoomAccounts{
+  repeated  DnPlayerAccounts playeraccounts = 1;
+  optional  uint32 winnerid = 2;
+  optional  uint32 gameTime = 3;
+}
+
+
+//推牌
+message DnPlayCards {
+  repeated uint32 cards = 1;
+  optional DN_NIUType niutype = 2;
+  optional uint32  sum = 3; 
+}
+
+message pushLookCard{
+  optional ErrCode status = 1;
+  repeated uint32 cards = 2;
+  optional DN_NIUType niutype = 3;
+  optional uint32  sum = 4; 
+}
+
+message DnOperate {
+  enum OperateType {
+    BET  = 0;    //下注
+    PUBLICBET = 1;  //公海下注
+    SHUFFLING = 2;  //搓牌
+  }
+  optional OperateType type  = 1;
+  optional uint32      uin    = 2;
+  optional uint32      num    = 3;
+}
+
+message OffLinerPlayerCache{
+  optional uint32 uin = 1;
+  optional bool ready = 2; //本玩家准备阶段是否准备
+  optional bool beted = 3;
+  optional uint32 power = 4;
+  optional bool pulicebeted = 5;
+  optional int32 publicpower = 6;
+  optional bool skip = 7;
+}
+
+message DnCache {
+  enum OffLineState {
+    BET  = 0;    //下注阶段
+    READY = 1;   //准备阶段
+    PUBLICBET = 2;  //公海下注阶段 
+    ACCOUNTS = 3;      //结算阶段
+    VOTE     = 4;      //解散房间阶段
+    SHUFFLING = 5;
+  }
+  optional OffLineState state  = 1;  //当前状态  
+  optional uint32 currentPlay  = 2;
+  repeated DnRoundPlayerResult result = 3;
+  repeated OffLinerPlayerCache playercache = 4;
+  optional uint32 canPublicPower = 5;
+  optional uint32 roundid = 6;
+  optional uint32 shufflingPlayer = 7;
+}
+
+//下注
+message Bet{
+  enum BetType{
+    BET = 0;
+    PUBLICBET = 1;
+    SKIP_PUBLIC =2;
+  }
+  optional uint32 uin = 1;
+  optional BetType bettype = 2;
+  optional uint32 power = 3;
+}
+
+message PushShowCard{
+  optional uint32 uin = 1;     //0为公海亮牌
+  repeated uint32 cards = 2;
+  optional DN_NIUType niutype = 3;
+  optional uint32  sum = 4;
+}
+
+//推送玩家局内状态
+message DnRoundPlayerState{
+  //赌局内玩家状态
+  enum DnPlayerState{
+    NORMAL = 0;
+    READY = 1;        //已准备
+    BETED = 2;          //已下注
+    PUBLICBET = 3;    //公海下注
+    SKIP = 4;    //跳过公海下注
+    SHUFFLING =5;   //玩家正搓牌
+  }
+  optional uint32 uin = 1;       
+  optional DnPlayerState state = 2;
+  optional uint32 num = 3;
+  optional ErrCode status = 4;
+}
+
+message DnRoundState{
+  enum RoundStateType {
+    ROOM_BET        = 0;    //斗牛房间内下注阶段
+    ROOM_PUBLIC_BET = 1;    //斗牛房间内公海下注阶段
+    ROOM_PUBLIC_BET_OVER = 2; //公海下注结束
+    ROOM_ACCOUNTS   = 3;    //斗牛房间内单局结算
+  }
+  optional RoundStateType state = 1; 
+}

@@ -1,0 +1,47 @@
+package Game;
+
+import 'common.proto';
+import "rpc.proto";
+
+service C2SLogin {
+  rpc login (C2S_Login) returns (S2C_Login) {option(rpcid)=10;}
+
+  // 心跳
+  rpc heartBeat (EmptyMessage) returns (respHeartBeat) {option(rpcid)=11;}
+}
+
+service S2CLogin {
+  // 推送玩家基本信息
+  rpc pushBasicPlayerInfo (PlayerInfo) returns (NilMessage) {option(rpcid)=12;}
+}
+
+message C2S_Login {
+  optional  string  openid     = 1;
+  optional  string  token      = 2;
+  optional  string  device     = 3;
+  optional  int32   sex        = 4;   //  性别
+  optional  string  name       =  5;   //  昵称
+  optional  string  imgurl     =  6;   //  头像地址
+  optional  string  country    =  7;   //  国家
+  optional  string  province   =  8;  //  省份
+  optional  string  city       =  9;  //  城市
+}
+  
+message S2C_Login {
+  // 账号验证结果
+  enum LoginResult {
+    LOGIN_SUCCEED  = 1; //登录成功
+  }
+  optional  LoginResult  result      =  1;
+  optional  bool         new_player  =  2;
+}
+
+message PlayerInfo {
+  optional  uint32  uin        =  1;
+  optional  uint32  room_ticket =  2;
+  optional  string  ip        =  3;
+}
+
+message respHeartBeat{
+  optional uint32 time   = 1;
+}
